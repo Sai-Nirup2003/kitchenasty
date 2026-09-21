@@ -1,0 +1,42 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo "Installing dependencies..."
+      - npm ci
+
+      - echo "Running unit tests..."
+      - npm run test:unit
+
+      - echo "Getting AWS account details..."
+      - AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+      - ECR_REPOSITORY=kitchenasty-server
+      - ECR_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_REPOSITORY
+      - IMAGE_TAG=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+
+      - echo "Logging in to Amazon ECR..."
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR_URI
+
+  build:
+    commands:
+      - echo "Building Docker image..."
+      - docker build -f packages/server/Dockerfile -t $ECR_URI:$IMAGE_TAG .
+
+      - echo "Installing Trivy..."
+      - curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+
+      - echo "Scanning Docker image..."
+      - trivy image --exit-code 1 --severity HIGH,CRITICAL $ECR_URI:$IMAGE_TAG
+
+  post_build:
+    commands:
+      - echo "Security scan passed. Pushing image to ECR..."
+      - docker push $ECR_URI:$IMAGE_TAG
+
+      - echo "Creating ECS image definition..."
+      - printf '[{"name":"kitchenasty-server","imageUri":"%s"}]' "$ECR_URI:$IMAGE_TAG" > imagedefinitions.json
+
+artifacts:
+  files:
+    - imagedefinitions.json
