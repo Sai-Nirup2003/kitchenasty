@@ -33,7 +33,7 @@ COPY packages/server/package.json packages/server/
 COPY packages/admin/package.json packages/admin/
 COPY packages/storefront/package.json packages/storefront/
 
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev && npm install --no-save pino-pretty
 
 COPY prisma/ prisma/
 RUN npx -w packages/server prisma generate --schema ../../prisma/schema.prisma
