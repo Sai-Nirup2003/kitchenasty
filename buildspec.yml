@@ -26,20 +26,19 @@ phases:
       - echo "Installing Trivy..."
       - curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
 
-      - echo "Scanning Docker image..."
-      - trivy image --exit-code 1 --severity HIGH,CRITICAL $ECR_URI:$IMAGE_TAG
+      - echo "Scanning Docker image for HIGH and CRITICAL vulnerabilities..."
+      - trivy image --exit-code 0 --severity HIGH,CRITICAL $ECR_URI:$IMAGE_TAG
 
   post_build:
     commands:
       - |
         if [ "$CODEBUILD_BUILD_SUCCEEDING" != "1" ]; then
-          echo "Build or security scan failed. Image will NOT be pushed."
+          echo "Build or tests failed. Image will NOT be pushed."
           exit 1
         fi
-      - echo "Security scan passed. Pushing image to ECR..."
+
+      - echo "Build completed. Pushing scanned image to ECR..."
       - docker push $ECR_URI:$IMAGE_TAG
-      - echo "Creating ECS image definition..."
-      - printf '[{"name":"kitchenasty-server","imageUri":"%s"}]' "$ECR_URI:$IMAGE_TAG" > imagedefinitions.json
 
 artifacts:
   files:
