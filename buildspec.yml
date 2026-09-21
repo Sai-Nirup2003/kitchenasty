@@ -30,16 +30,16 @@ phases:
       - trivy image --exit-code 1 --severity HIGH,CRITICAL $ECR_URI:$IMAGE_TAG
 
   post_build:
-  commands:
-    - |
-      if [ "$CODEBUILD_BUILD_SUCCEEDING" != "1" ]; then
-        echo "Build or security scan failed. Image will NOT be pushed."
-        exit 1
-      fi
-    - echo "Security scan passed. Pushing image to ECR..."
-    - docker push $ECR_URI:$IMAGE_TAG
-    - echo "Creating ECS image definition..."
-    - printf '[{"name":"kitchenasty-server","imageUri":"%s"}]' "$ECR_URI:$IMAGE_TAG" > imagedefinitions.json
+    commands:
+      - |
+        if [ "$CODEBUILD_BUILD_SUCCEEDING" != "1" ]; then
+          echo "Build or security scan failed. Image will NOT be pushed."
+          exit 1
+        fi
+      - echo "Security scan passed. Pushing image to ECR..."
+      - docker push $ECR_URI:$IMAGE_TAG
+      - echo "Creating ECS image definition..."
+      - printf '[{"name":"kitchenasty-server","imageUri":"%s"}]' "$ECR_URI:$IMAGE_TAG" > imagedefinitions.json
 
 artifacts:
   files:
