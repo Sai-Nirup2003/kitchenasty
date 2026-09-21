@@ -40,6 +40,9 @@ phases:
       - echo "Build completed. Pushing scanned image to ECR..."
       - docker push $ECR_URI:$IMAGE_TAG
 
+      - echo "Creating ECS image definition..."
+      - printf '[{"name":"kitchenasty-server","imageUri":"%s"}]' "$ECR_URI:$IMAGE_TAG" > imagedefinitions.json
+
 artifacts:
   files:
     - imagedefinitions.json
